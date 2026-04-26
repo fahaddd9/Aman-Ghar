@@ -1,0 +1,3 @@
+# AmanGhar Assets — Images
+# Provider images use CachedNetworkImage (pravatar.cc URLs) — no local files needed.
+# This placeholder keeps the assets/images/ directory tracked by Flutter's asset bundler.
