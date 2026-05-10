@@ -1,15 +1,16 @@
+// Purpose: Search result row card — Avatar | Name+Rating+Location | Price+SELECT.
+// Doc: 04_ui_improvement_and_fix_phase.md — Step 4
+
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../core/config/app_theme.dart';
 import '../../core/models/provider_model.dart';
 import 'verified_badge.dart';
 import 'rating_row.dart';
 import 'custom_filled_button.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ProviderListTile — Search result row card
-// CircleAvatar | Name + Verified + Rating + Location | Price + SELECT button
-// ─────────────────────────────────────────────────────────────────────────────
+/// ProviderListTile — Full search-result card with avatar, info, and SELECT button.
 class ProviderListTile extends StatelessWidget {
   final ServiceProvider provider;
   final VoidCallback? onSelect;
@@ -30,10 +31,11 @@ class ProviderListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = _avatarUrls[provider.id] ?? 'https://i.pravatar.cc/150';
+    final String imageUrl =
+        _avatarUrls[provider.id] ?? 'https://i.pravatar.cc/150';
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-      padding: const EdgeInsets.all(AppSpacing.md),
+      margin: EdgeInsets.symmetric(vertical: AppSpacing.xs.h),
+      padding: EdgeInsets.all(AppSpacing.md.w),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.card),
@@ -46,13 +48,13 @@ class ProviderListTile extends StatelessWidget {
           Hero(
             tag: 'provider-image-${provider.id}',
             child: CircleAvatar(
-              radius: 28,
+              radius: 28.r,
               backgroundColor: AppColors.primaryLight.withValues(alpha: 0.4),
               child: ClipOval(
                 child: CachedNetworkImage(
                   imageUrl: imageUrl,
-                  width: 56,
-                  height: 56,
+                  width: 56.w,
+                  height: 56.w,
                   fit: BoxFit.cover,
                   placeholder: (_, __) => const Icon(
                     Icons.person_rounded,
@@ -68,7 +70,7 @@ class ProviderListTile extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12.w),
 
           // ── Name, rating, location ────────────────────────────────────
           Expanded(
@@ -88,17 +90,17 @@ class ProviderListTile extends StatelessWidget {
                       ),
                     ),
                     if (provider.isVerified) ...[
-                      const SizedBox(width: AppSpacing.xs),
+                      SizedBox(width: AppSpacing.xs.w),
                       const VerifiedBadge(),
                     ],
                   ],
                 ),
-                const SizedBox(height: 3),
+                SizedBox(height: 3.h),
                 RatingRow(
                   rating: provider.rating,
                   reviewCount: provider.reviewCount,
                 ),
-                const SizedBox(height: 3),
+                SizedBox(height: 3.h),
                 Text(
                   '${provider.serviceType} • ${provider.location}',
                   style: AppTextStyles.bodySmall,
@@ -107,7 +109,7 @@ class ProviderListTile extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12.w),
 
           // ── Price + SELECT button ─────────────────────────────────────
           Column(
@@ -116,15 +118,15 @@ class ProviderListTile extends StatelessWidget {
             children: [
               Text(
                 provider.formattedPrice,
-                style: AppTextStyles.price.copyWith(fontSize: 13),
+                style: AppTextStyles.price.copyWith(fontSize: 13.sp),
               ),
-              const SizedBox(height: 6),
+              SizedBox(height: 6.h),
               SizedBox(
-                width: 90,
-                height: 34,
+                width: 90.w,
+                height: 34.h,
                 child: CustomFilledButton(
                   label: 'SELECT',
-                  height: 34,
+                  height: 34.h,
                   onTap: onSelect,
                 ),
               ),

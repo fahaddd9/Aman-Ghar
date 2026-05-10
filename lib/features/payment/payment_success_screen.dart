@@ -1,12 +1,13 @@
+// Purpose: Success screen after payment.
+// Doc: 04_ui_improvement_and_fix_phase.md — Step 7
+
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/config/app_theme.dart';
-import '../../core/config/app_constants.dart';
 import '../../shared/widgets/custom_filled_button.dart';
+import '../../shared/widgets/custom_outlined_button.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PaymentSuccessScreen — Animated success check, booking summary, TRACK button
-// ─────────────────────────────────────────────────────────────────────────────
 class PaymentSuccessScreen extends StatefulWidget {
   const PaymentSuccessScreen({super.key});
 
@@ -16,33 +17,38 @@ class PaymentSuccessScreen extends StatefulWidget {
 
 class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
     with SingleTickerProviderStateMixin {
-  static const bool enableAnimations = true;
-
-  late AnimationController _checkController;
-  late Animation<double> _checkScale;
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+  late final Animation<double> _fade;
 
   @override
   void initState() {
     super.initState();
-    _checkController = AnimationController(
+    _controller = AnimationController(
       vsync: this,
-      duration: AppConstants.successIconDuration,
+      duration: AppDurations.slow,
     );
-    _checkScale = CurvedAnimation(
-      parent: _checkController,
-      curve: Curves.elasticOut,
+
+    _scale = Tween<double>(begin: 0.5, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.6, curve: Curves.elasticOut),
+      ),
     );
-    if (enableAnimations) {
-      Future.delayed(const Duration(milliseconds: 200),
-          () => _checkController.forward());
-    } else {
-      _checkController.value = 1.0;
-    }
+
+    _fade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.3, 1.0, curve: Curves.easeIn),
+      ),
+    );
+
+    _controller.forward();
   }
 
   @override
   void dispose() {
-    _checkController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
@@ -50,118 +56,90 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        automaticallyImplyLeading: false,
-        centerTitle: true,
-        title: Text('Booking Confirmed', style: AppTextStyles.headingSmall),
-        // Added a back button for safety, though typically success screens lead forward
-        leading: IconButton(
-          onPressed: () => context.go('/home'),
-          icon: const Icon(Icons.close_rounded),
-        ),
-      ),
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.lg),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // ── Animated success icon ─────────────────────────────────
-                ScaleTransition(
-                  scale: _checkScale,
-                  child: Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
+        child: Padding(
+          padding: EdgeInsets.all(AppSpacing.lg.w),
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              return Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Spacer(),
+
+                  // Success Icon Animation
+                  ScaleTransition(
+                    scale: _scale,
+                    child: Container(
+                      width: 120.w,
+                      height: 120.w,
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySurface,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.2),
+                            blurRadius: 24.r,
+                            spreadRadius: 8.r,
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.check_circle_rounded,
+                        size: 80.sp,
+                        color: AppColors.primary,
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.check_circle_rounded,
-                      size: 64,
-                      color: AppColors.primary,
+                  ),
+
+                  SizedBox(height: AppSpacing.xxl.h),
+
+                  // Text Content
+                  FadeTransition(
+                    opacity: _fade,
+                    child: Column(
+                      children: [
+                        Text(
+                          AppStrings.successTitle,
+                          style: AppTextStyles.displayLarge.copyWith(color: AppColors.primary),
+                          textAlign: TextAlign.center,
+                        ),
+                        SizedBox(height: AppSpacing.sm.h),
+                        Text(
+                          AppStrings.successSubtitle,
+                          style: AppTextStyles.bodyMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                     ),
                   ),
-                ),
 
-                const SizedBox(height: AppSpacing.lg),
-                Text(
-                  AppConstants.successTitle,
-                  style: AppTextStyles.headingLarge,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  AppConstants.successSubtitle,
-                  style: AppTextStyles.bodyMedium,
-                  textAlign: TextAlign.center,
-                ),
+                  const Spacer(),
 
-                const SizedBox(height: AppSpacing.xl),
-
-                // ── Booking summary card ──────────────────────────────────
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(AppRadius.card),
-                    boxShadow: AppShadows.card,
+                  // Action Buttons
+                  FadeTransition(
+                    opacity: _fade,
+                    child: Column(
+                      children: [
+                        CustomFilledButton(
+                          label: AppStrings.trackBookingStatus,
+                          onTap: () => context.pushReplacement('/booking-status'),
+                        ),
+                        SizedBox(height: AppSpacing.md.h),
+                        CustomOutlinedButton(
+                          label: 'BACK TO HOME',
+                          onTap: () => context.go('/home'),
+                        ),
+                      ],
+                    ),
                   ),
-                  child: const Column(
-                    children: [
-                      _DetailRow('Provider', 'Anita S.'),
-                      Divider(color: AppColors.divider),
-                      _DetailRow('Service', 'Daily Cook'),
-                      Divider(color: AppColors.divider),
-                      _DetailRow('Date', 'Tomorrow, 8:00 AM'),
-                      Divider(color: AppColors.divider),
-                      _DetailRow('Total Paid', 'PKR 1,320', highlight: true),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: AppSpacing.xl),
-
-                CustomFilledButton(
-                  label: AppConstants.successTrackButton,
-                  onTap: () => context.go('/booking-status'),
-                ),
-              ],
-            ),
+                  
+                  SizedBox(height: AppSpacing.lg.h),
+                ],
+              );
+            },
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _DetailRow extends StatelessWidget {
-  final String label;
-  final String value;
-  final bool highlight;
-  const _DetailRow(this.label, this.value, {this.highlight = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: AppTextStyles.bodyMedium),
-          Text(
-            value,
-            style: highlight
-                ? AppTextStyles.price
-                : AppTextStyles.bodyLarge
-                    .copyWith(fontWeight: FontWeight.w500),
-          ),
-        ],
       ),
     );
   }

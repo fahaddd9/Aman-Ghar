@@ -1,201 +1,242 @@
+// Purpose: AmanGhar Home Screen (Discovery & Status).
+// Doc: 04_ui_improvement_and_fix_phase.md — Step 4: Home Screen
+
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/config/app_theme.dart';
-import '../../core/config/app_constants.dart';
 import '../../core/data/dummy_data.dart';
+import '../../core/providers/role_provider.dart';
 import '../../shared/widgets/service_card.dart';
 import '../../shared/widgets/booking_card.dart';
-import '../../shared/widgets/section_header.dart';
 import '../../shared/widgets/bottom_nav_bar.dart';
+import '../../shared/widgets/section_header.dart';
+import '../../core/providers/auth_provider.dart';
+import 'provider_home_screen.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// HomeScreen — Discovery home for Hirer
-// AppBar | Search bar | Horizontal service cards | Recent Bookings | Bottom nav
-// ─────────────────────────────────────────────────────────────────────────────
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
-  static const String _userAvatarUrl = 'https://i.pravatar.cc/100?img=5';
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userProfileAsync = ref.watch(userProfileProvider);
+    
+    return userProfileAsync.when(
+      data: (profile) {
+        final roleStr = profile?['role'] as String? ?? 'hirer';
+        final name = profile?['name'] as String? ?? 'User';
+        
+        // Sync the local role provider for bottom nav and other elements
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final expectedRole = roleStr == 'provider' ? UserRole.provider : UserRole.hirer;
+          if (ref.read(roleProvider) != expectedRole) {
+            ref.read(roleProvider.notifier).state = expectedRole;
+          }
+        });
 
-  String _greeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return AppConstants.homeGreetingMorning;
-    if (hour < 17) return AppConstants.homeGreetingAfternoon;
-    return AppConstants.homeGreetingEvening;
+        if (roleStr == 'provider') {
+          return ProviderHomeScreen(userName: name);
+        }
+        return HirerHomeScreen(userName: name);
+      },
+      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator(color: AppColors.primary))),
+      error: (_, __) => const HirerHomeScreen(userName: 'Guest'),
+    );
+  }
+}
+
+class HirerHomeScreen extends StatefulWidget {
+  final String userName;
+  const HirerHomeScreen({super.key, required this.userName});
+
+  @override
+  State<HirerHomeScreen> createState() => _HirerHomeScreenState();
+}
+
+class _HirerHomeScreenState extends State<HirerHomeScreen> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _handleSearch(String query) {
+    if (query.trim().isEmpty) return;
+    context.push('/search?q=${Uri.encodeComponent(query)}');
   }
 
   @override
   Widget build(BuildContext context) {
-    const providers = DummyData.providers;
-    const bookings = DummyData.bookings;
+    final providers = DummyData.providers;
+    final bookings = DummyData.bookings;
+    // Just showing active/recent bookings
+    final recentBookings = bookings.take(2).toList();
 
     return Scaffold(
       backgroundColor: AppColors.background,
-
-      // ── AppBar ──────────────────────────────────────────────────────────
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leadingWidth: 52,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: AppSpacing.md),
-          child: CircleAvatar(
-            radius: 18,
-              backgroundColor: AppColors.primaryLight.withValues(alpha: 0.4),
-            child: ClipOval(
-              child: CachedNetworkImage(
-                imageUrl: _userAvatarUrl,
-                width: 36,
-                height: 36,
-                fit: BoxFit.cover,
-                errorWidget: (_, __, ___) =>
-                    const Icon(Icons.person_rounded, size: 18),
-              ),
-            ),
-          ),
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.location_on_rounded,
-                    size: 12, color: AppColors.primary),
-                const SizedBox(width: 2),
-                Flexible(
-                  child: Text(
-                    AppConstants.dummyUserLocation,
-                    style: AppTextStyles.bodySmall
-                        .copyWith(color: AppColors.primary, fontSize: 11),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            Text(
-              '${_greeting()}, Ayesha!',
-              style: AppTextStyles.headingSmall,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.notifications_rounded,
-                color: AppColors.textPrimary),
-          ),
-        ],
-      ),
-
-      // ── Bottom nav ──────────────────────────────────────────────────────
       bottomNavigationBar: const AmanGharBottomNav(currentIndex: 0),
-
-      // ── Body ────────────────────────────────────────────────────────────
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Search bar ──────────────────────────────────────────────
+              SizedBox(height: AppSpacing.lg.h),
+              
+              // ── Header (Greeting + Avatar) ───────────────────────────
               Padding(
-                padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.md, AppSpacing.md, AppSpacing.md, 0),
-                child: GestureDetector(
-                  onTap: () => context.push('/search'),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(AppRadius.card),
-                      boxShadow: AppShadows.card,
-                    ),
-                    child: Row(
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.md.w),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.search_rounded,
-                            color: AppColors.textHint, size: 22),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: Text(
-                            AppConstants.homeSearchHint,
-                            style: AppTextStyles.bodyMedium
-                                .copyWith(color: AppColors.textHint),
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                        Text(
+                          AppStrings.greetingMorning,
+                          style: AppTextStyles.bodyMedium,
+                        ),
+                        SizedBox(height: 2.h),
+                        Text(
+                          widget.userName,
+                          style: AppTextStyles.headingMedium,
                         ),
                       ],
                     ),
-                  ),
-                ),
-              ),
-        
-              // ── Section: Services ───────────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.md, AppSpacing.lg, AppSpacing.md, AppSpacing.sm),
-                child: Row(
-                  children: [
-                    const Expanded(child: SectionHeader('Services')),
-                    TextButton(
-                      onPressed: () => context.push('/search'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppColors.primary,
-                        padding: EdgeInsets.zero,
-                        minimumSize: Size.zero,
-                      ),
-                      child: Text(
-                        AppConstants.homeSeeAll,
-                        style: AppTextStyles.bodyMedium
-                            .copyWith(color: AppColors.primary),
+                    GestureDetector(
+                      onTap: () => context.go('/profile'),
+                      child: Hero(
+                        tag: 'profile-avatar',
+                        child: CircleAvatar(
+                          radius: 24.r,
+                          backgroundColor: AppColors.primaryLight,
+                          child: Text(
+                            widget.userName.isNotEmpty ? widget.userName[0].toUpperCase() : 'U',
+                            style: AppTextStyles.headingSmall.copyWith(color: AppColors.primaryDark),
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-        
-              // ── Horizontal service cards ─────────────────────────────────
-              SizedBox(
-                height: 220, // Increased slightly for better fit
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                  itemCount: providers.length,
-                  separatorBuilder: (_, __) =>
-                      const SizedBox(width: AppSpacing.sm),
-                  itemBuilder: (_, i) => ServiceCard(provider: providers[i]),
-                ),
-              ),
-        
-              // ── Section: Recent Bookings ─────────────────────────────────
-              const Padding(
-                padding: EdgeInsets.fromLTRB(
-                    AppSpacing.md, AppSpacing.lg, AppSpacing.md, AppSpacing.sm),
-                child: SectionHeader('Recent Bookings'),
-              ),
-        
-              // ── Booking cards ─────────────────────────────────────────────
+              
+              SizedBox(height: AppSpacing.lg.h),
+
+              // ── Search Bar ───────────────────────────────────────────
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: 2,
-                  separatorBuilder: (_, __) =>
-                      const SizedBox(height: AppSpacing.sm),
-                  itemBuilder: (_, i) => BookingCard(
-                    booking: bookings[i],
-                    onBookAgain: () =>
-                        context.push('/provider/${bookings[i].providerId}'),
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.md.w),
+                child: TextField(
+                  controller: _searchController,
+                  textInputAction: TextInputAction.search,
+                  onSubmitted: _handleSearch,
+                  style: AppTextStyles.bodyLarge,
+                  decoration: InputDecoration(
+                    hintText: AppStrings.searchHint,
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.tune_rounded),
+                      onPressed: () {
+                        // Show filter bottom sheet (placeholder for future implementation)
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Filters coming soon', style: AppTextStyles.bodyMedium.copyWith(color: Colors.white)),
+                            backgroundColor: AppColors.textPrimary,
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),
-        
-              const SizedBox(height: AppSpacing.xl),
+
+              SizedBox(height: AppSpacing.xl.h),
+
+              // ── Services Horizontal List ─────────────────────────────
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.md.w),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const SectionHeader(AppStrings.servicesSection),
+                    TextButton(
+                      onPressed: () => context.push('/search?q='),
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: Text(
+                        AppStrings.seeAll,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: AppSpacing.sm.h),
+              SizedBox(
+                height: 210.h,
+                child: ListView.separated(
+                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.md.w),
+                  scrollDirection: Axis.horizontal,
+                  itemCount: providers.length,
+                  separatorBuilder: (_, __) => SizedBox(width: AppSpacing.md.w),
+                  itemBuilder: (_, index) {
+                    return ServiceCard(provider: providers[index]);
+                  },
+                ),
+              ),
+
+              SizedBox(height: AppSpacing.xl.h),
+
+              // ── Recent Bookings ──────────────────────────────────────
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.md.w),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const SectionHeader(AppStrings.recentBookingsSection),
+                    TextButton(
+                      onPressed: () => context.go('/my-bookings'),
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: Text(
+                        AppStrings.seeAll,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: AppSpacing.sm.h),
+              ListView.separated(
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.md.w),
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: recentBookings.length,
+                separatorBuilder: (_, __) => SizedBox(height: AppSpacing.sm.h),
+                itemBuilder: (_, index) {
+                  return BookingCard(
+                    booking: recentBookings[index],
+                    onBookAgain: () => context.push('/provider/${recentBookings[index].providerId}'),
+                    onRateNow: () => context.push('/rate-now/${recentBookings[index].providerId}'),
+                  );
+                },
+              ),
+              
+              SizedBox(height: AppSpacing.xxl.h),
             ],
           ),
         ),

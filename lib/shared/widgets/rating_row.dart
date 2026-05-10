@@ -1,9 +1,11 @@
+// Purpose: Star icon + rating + review count row.
+// Doc: 04_ui_improvement_and_fix_phase.md — Step 1
+
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../core/config/app_theme.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// RatingRow — Star icon + rating value + review count in one row
-// ─────────────────────────────────────────────────────────────────────────────
+/// RatingRow — ⭐ 4.8 (142 reviews) in a single row.
 class RatingRow extends StatelessWidget {
   final double rating;
   final int reviewCount;
@@ -18,24 +20,22 @@ class RatingRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveTextColor = textColor ?? AppColors.textPrimary;
+    final Color effectiveTextColor = textColor ?? AppColors.textPrimary;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(
-          Icons.star_rounded,
-          size: 14,
-          color: AppColors.starRating,
-        ),
-        const SizedBox(width: 2),
+        Icon(Icons.star_rounded, size: 14.sp, color: AppColors.starRating),
+        SizedBox(width: 2.w),
         Text(
           rating.toStringAsFixed(1),
           style: AppTextStyles.rating.copyWith(color: effectiveTextColor),
         ),
-        const SizedBox(width: AppSpacing.xs),
+        SizedBox(width: AppSpacing.xs.w),
         Text(
           '($reviewCount reviews)',
-          style: AppTextStyles.bodySmall.copyWith(color: effectiveTextColor.withValues(alpha: 0.8)),
+          style: AppTextStyles.bodySmall.copyWith(
+            color: effectiveTextColor.withValues(alpha: 0.8),
+          ),
         ),
       ],
     );

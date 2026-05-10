@@ -1,13 +1,15 @@
+// Purpose: Bordered secondary button with press scale animation.
+// Doc: 04_ui_improvement_and_fix_phase.md — Step 1: Reusable widgets
+
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../core/config/app_theme.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// CustomOutlinedButton — Bordered secondary button with press scale animation
-// ─────────────────────────────────────────────────────────────────────────────
+/// CustomOutlinedButton — Secondary bordered button with tap scale.
 class CustomOutlinedButton extends StatefulWidget {
   final String label;
   final VoidCallback? onTap;
-  final double height;
+  final double? height;
   final IconData? icon;
   final Color? borderColor;
   final Color? textColor;
@@ -17,7 +19,7 @@ class CustomOutlinedButton extends StatefulWidget {
     super.key,
     required this.label,
     this.onTap,
-    this.height = 52,
+    this.height,
     this.icon,
     this.borderColor,
     this.textColor,
@@ -30,21 +32,19 @@ class CustomOutlinedButton extends StatefulWidget {
 
 class _CustomOutlinedButtonState extends State<CustomOutlinedButton>
     with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-
-  static const bool enableAnimations = true;
+  late final AnimationController _controller;
+  late final Animation<double> _scaleAnimation;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 120),
-      reverseDuration: const Duration(milliseconds: 120),
+      duration: AppDurations.instant,
+      reverseDuration: AppDurations.instant,
     );
     _scaleAnimation = Tween<double>(begin: 1.0, end: 0.96).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
     );
   }
 
@@ -54,23 +54,21 @@ class _CustomOutlinedButtonState extends State<CustomOutlinedButton>
     super.dispose();
   }
 
-  void _onTapDown(TapDownDetails _) {
-    if (enableAnimations) _controller.forward();
-  }
+  void _onTapDown(TapDownDetails _) => _controller.forward();
 
   void _onTapUp(TapUpDetails _) {
-    if (enableAnimations) _controller.reverse();
+    _controller.reverse();
     widget.onTap?.call();
   }
 
-  void _onTapCancel() {
-    if (enableAnimations) _controller.reverse();
-  }
+  void _onTapCancel() => _controller.reverse();
 
   @override
   Widget build(BuildContext context) {
-    final effectiveBorderColor = widget.borderColor ?? AppColors.primary;
-    final effectiveTextColor = widget.textColor ?? AppColors.primary;
+    final Color effectiveBorderColor = widget.borderColor ?? AppColors.primary;
+    final Color effectiveTextColor = widget.textColor ?? AppColors.primary;
+    final double effectiveHeight = widget.height ?? 52.h;
+    final bool isSmall = effectiveHeight < 40.h;
 
     return GestureDetector(
       onTapDown: _onTapDown,
@@ -80,8 +78,8 @@ class _CustomOutlinedButtonState extends State<CustomOutlinedButton>
         scale: _scaleAnimation,
         child: Container(
           width: widget.isFullWidth ? double.infinity : null,
-          height: widget.height,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+          height: effectiveHeight,
+          padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm.w),
           decoration: BoxDecoration(
             color: Colors.transparent,
             borderRadius: BorderRadius.circular(AppRadius.button),
@@ -93,13 +91,15 @@ class _CustomOutlinedButtonState extends State<CustomOutlinedButton>
             children: [
               if (widget.icon != null) ...[
                 Icon(widget.icon, color: effectiveTextColor, size: 16),
-                const SizedBox(width: 4),
+                SizedBox(width: 4.w),
               ],
               Flexible(
                 child: Text(
                   widget.label,
-                  style: AppTextStyles.headingSmall
-                      .copyWith(color: effectiveTextColor, fontSize: widget.height < 40 ? 11 : 14),
+                  style: AppTextStyles.headingSmall.copyWith(
+                    color: effectiveTextColor,
+                    fontSize: isSmall ? 11.sp : 14.sp,
+                  ),
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,
                 ),

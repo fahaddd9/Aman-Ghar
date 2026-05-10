@@ -1,12 +1,12 @@
+// Purpose: AmanGhar launch screen with staggered fade-in animations.
+// After 2.5s → navigates to /role-select
+// Doc: 04_ui_improvement_and_fix_phase.md — Step 2: Logo & Splash
+
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/config/app_theme.dart';
-import '../../core/config/app_constants.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SplashScreen — AmanGhar launch screen with staggered AnimatedOpacity
-// After 2.5s → navigates to /role-select
-// ─────────────────────────────────────────────────────────────────────────────
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -14,35 +14,61 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
-  static const bool enableAnimations = true;
-
-  double _logoOpacity = 0;
-  double _titleOpacity = 0;
-  double _taglineOpacity = 0;
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _logoScale;
+  late final Animation<double> _logoFade;
+  late final Animation<double> _titleFade;
+  late final Animation<double> _taglineFade;
 
   @override
   void initState() {
     super.initState();
-    _runAnimations();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    );
+
+    _logoScale = Tween<double>(begin: 0.5, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.4, curve: Curves.elasticOut),
+      ),
+    );
+    _logoFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.3, curve: Curves.easeOut),
+      ),
+    );
+    _titleFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.25, 0.55, curve: Curves.easeOut),
+      ),
+    );
+    _taglineFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.45, 0.75, curve: Curves.easeOut),
+      ),
+    );
+
+    _controller.forward();
+    _navigateAfterDelay();
   }
 
-  Future<void> _runAnimations() async {
-    await Future.delayed(const Duration(milliseconds: 100));
-    if (!mounted) return;
-    setState(() => _logoOpacity = 1.0);
-
-    await Future.delayed(const Duration(milliseconds: 400));
-    if (!mounted) return;
-    setState(() => _titleOpacity = 1.0);
-
-    await Future.delayed(const Duration(milliseconds: 300));
-    if (!mounted) return;
-    setState(() => _taglineOpacity = 1.0);
-
-    await Future.delayed(const Duration(milliseconds: 1300));
+  Future<void> _navigateAfterDelay() async {
+    await Future.delayed(AppDurations.splash);
     if (!mounted) return;
     context.go('/role-select');
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
@@ -50,105 +76,103 @@ class _SplashScreenState extends State<SplashScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // ── Logo ─────────────────────────────────────────────────────
-            AnimatedOpacity(
-              opacity: enableAnimations ? _logoOpacity : 1.0,
-              duration: AppConstants.splashLogoFadeDuration,
-              curve: Curves.easeIn,
-              child: Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppRadius.card),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.15),
-                      blurRadius: 24,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.home_rounded,
-                    size: 56,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: AppSpacing.md),
-
-            // ── App Name ─────────────────────────────────────────────────
-            AnimatedOpacity(
-              opacity: enableAnimations ? _titleOpacity : 1.0,
-              duration: AppConstants.splashLogoFadeDuration,
-              curve: Curves.easeIn,
-              child: Column(
-                children: [
-                  Text(
-                    AppConstants.appName,
-                    style: AppTextStyles.headingLarge.copyWith(
-                      color: AppColors.primary,
-                      fontSize: 32,
-                      letterSpacing: 0.5,
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (BuildContext context, Widget? child) {
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // ── Logo ─────────────────────────────────────────────────
+                FadeTransition(
+                  opacity: _logoFade,
+                  child: ScaleTransition(
+                    scale: _logoScale,
+                    child: Container(
+                      width: 100.w,
+                      height: 100.w,
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySurface,
+                        borderRadius: BorderRadius.circular(AppRadius.card),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.15),
+                            blurRadius: 24.r,
+                            offset: Offset(0, 8.h),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Icon(
+                          Icons.home_rounded,
+                          size: 56.sp,
+                          color: AppColors.primary,
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    AppConstants.appNameUrdu,
-                    style: AppTextStyles.headingMedium.copyWith(
-                      color: AppColors.primary.withValues(alpha: 0.6),
-                      fontSize: 18,
+                ),
+
+                SizedBox(height: AppSpacing.md.h),
+
+                // ── App Name ─────────────────────────────────────────────
+                FadeTransition(
+                  opacity: _titleFade,
+                  child: Column(
+                    children: [
+                      Text(
+                        AppStrings.appName,
+                        style: AppTextStyles.displayLarge.copyWith(
+                          color: AppColors.primary,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      SizedBox(height: AppSpacing.xs.h),
+                      Text(
+                        AppStrings.appNameUrdu,
+                        style: AppTextStyles.headingMedium.copyWith(
+                          color: AppColors.primary.withValues(alpha: 0.6),
+                          fontSize: 18.sp,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                SizedBox(height: AppSpacing.sm.h),
+
+                // ── Tagline ──────────────────────────────────────────────
+                FadeTransition(
+                  opacity: _taglineFade,
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl.w),
+                    child: Text(
+                      AppStrings.tagline,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
+                        height: 1.5,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
-                ],
-              ),
-            ),
+                ),
 
-            const SizedBox(height: AppSpacing.sm),
+                SizedBox(height: AppSpacing.xxl.h),
 
-            // ── Tagline ───────────────────────────────────────────────────
-            AnimatedOpacity(
-              opacity: enableAnimations ? _taglineOpacity : 1.0,
-              duration: AppConstants.splashLogoFadeDuration,
-              curve: Curves.easeIn,
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-                child: Text(
-                  AppConstants.tagline,
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
-                    height: 1.5,
+                // ── Loading indicator ────────────────────────────────────
+                FadeTransition(
+                  opacity: _taglineFade,
+                  child: SizedBox(
+                    width: 24.w,
+                    height: 24.w,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: AppColors.primary.withValues(alpha: 0.5),
+                    ),
                   ),
-                  textAlign: TextAlign.center,
                 ),
-              ),
-            ),
-
-            const SizedBox(height: AppSpacing.xxl),
-
-            // ── Loading indicator ─────────────────────────────────────────
-            AnimatedOpacity(
-              opacity: enableAnimations ? _taglineOpacity : 1.0,
-              duration: AppConstants.splashLogoFadeDuration,
-              curve: Curves.easeIn,
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  color: AppColors.primary.withValues(alpha: 0.5),
-                ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         ),
       ),
     );

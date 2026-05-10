@@ -1,13 +1,13 @@
+// Purpose: Select payment method.
+// Doc: 04_ui_improvement_and_fix_phase.md — Step 7
+
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/config/app_theme.dart';
-import '../../core/config/app_constants.dart';
-import '../../shared/widgets/section_header.dart';
 import '../../shared/widgets/custom_filled_button.dart';
+import '../../shared/widgets/section_header.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PaymentMethodScreen — Saved cards, add new card, other payment options
-// ─────────────────────────────────────────────────────────────────────────────
 class PaymentMethodScreen extends StatefulWidget {
   const PaymentMethodScreen({super.key});
 
@@ -16,195 +16,201 @@ class PaymentMethodScreen extends StatefulWidget {
 }
 
 class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
-  // 0=Visa, 1=Mastercard, 2=Cash, 3=Bank, -1=none
-  int _selectedOption = 0;
+  String _selectedMethod = 'card_1';
+  bool _isLoading = false;
+
+  void _handlePayment() async {
+    setState(() => _isLoading = true);
+    await Future.delayed(AppDurations.slow); // Process payment
+    if (!mounted) return;
+    context.pushReplacement('/payment-success');
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        scrolledUnderElevation: 0,
+        title: const Text(AppStrings.paymentTitle),
         leading: IconButton(
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/home');
-            }
-          },
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onPressed: () => context.pop(),
         ),
-        title:
-            Text(AppConstants.paymentTitle, style: AppTextStyles.headingSmall),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ── Saved cards ─────────────────────────────────────────────
-                const SectionHeader(AppConstants.paymentSavedCards),
-                const SizedBox(height: AppSpacing.sm),
-                _buildInfoCard(children: [
-                  _PaymentOption(
-                    icon: Icons.credit_card_rounded,
-                    label: 'Visa •••• 4242',
-                    isSelected: _selectedOption == 0,
-                    onTap: () => setState(() => _selectedOption = 0),
-                  ),
-                  const Divider(color: AppColors.divider, height: 1),
-                  _PaymentOption(
-                    icon: Icons.credit_card_rounded,
-                    label: 'Mastercard •••• 8821',
-                    isSelected: _selectedOption == 1,
-                    onTap: () => setState(() => _selectedOption = 1),
-                  ),
-                ]),
-        
-                // ── Add new card ─────────────────────────────────────────────
-                const SizedBox(height: AppSpacing.lg),
-                const SectionHeader(AppConstants.paymentAddCard),
-                const SizedBox(height: AppSpacing.sm),
-                TextFormField(
-                  keyboardType: TextInputType.number,
-                  decoration: _inputDecoration(
-                      hint: 'Card number', icon: Icons.credit_card_rounded),
+          padding: EdgeInsets.all(AppSpacing.md.w),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SectionHeader(AppStrings.savedCards),
+              SizedBox(height: AppSpacing.md.h),
+
+              // Saved Card 1
+              _PaymentOptionTile(
+                id: 'card_1',
+                title: '•••• •••• •••• 4242',
+                subtitle: 'Expires 12/26',
+                icon: Icons.credit_card_rounded,
+                isSelected: _selectedMethod == 'card_1',
+                onTap: () => setState(() => _selectedMethod = 'card_1'),
+              ),
+              SizedBox(height: AppSpacing.sm.h),
+
+              // Saved Card 2
+              _PaymentOptionTile(
+                id: 'card_2',
+                title: '•••• •••• •••• 5555',
+                subtitle: 'Expires 08/25',
+                icon: Icons.credit_card_rounded,
+                isSelected: _selectedMethod == 'card_2',
+                onTap: () => setState(() => _selectedMethod = 'card_2'),
+              ),
+              SizedBox(height: AppSpacing.xl.h),
+
+              // Add New Card
+              const SectionHeader(AppStrings.addNewCard),
+              SizedBox(height: AppSpacing.md.h),
+              
+              TextFormField(
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  hintText: AppStrings.cardNumberHint,
+                  prefixIcon: Icon(Icons.credit_card_rounded),
                 ),
-                const SizedBox(height: AppSpacing.md),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        keyboardType: TextInputType.datetime,
-                        decoration: _inputDecoration(
-                            hint: 'MM/YY',
-                            icon: Icons.calendar_today_rounded),
+              ),
+              SizedBox(height: AppSpacing.md.h),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      keyboardType: TextInputType.datetime,
+                      decoration: const InputDecoration(
+                        hintText: AppStrings.expiryHint,
+                        prefixIcon: Icon(Icons.calendar_today_rounded),
                       ),
                     ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: TextFormField(
-                        obscureText: true,
-                        keyboardType: TextInputType.number,
-                        decoration: _inputDecoration(
-                            hint: 'CVV', icon: Icons.lock_outline_rounded),
+                  ),
+                  SizedBox(width: AppSpacing.md.w),
+                  Expanded(
+                    child: TextFormField(
+                      keyboardType: TextInputType.number,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        hintText: AppStrings.cvvHint,
+                        prefixIcon: Icon(Icons.lock_rounded),
                       ),
                     ),
-                  ],
-                ),
-        
-                // ── Other options ────────────────────────────────────────────
-                const SizedBox(height: AppSpacing.lg),
-                const SectionHeader(AppConstants.paymentOtherOptions),
-                const SizedBox(height: AppSpacing.sm),
-                _buildInfoCard(children: [
-                  _PaymentOption(
-                    icon: Icons.money_rounded,
-                    label: 'Cash on Service',
-                    isSelected: _selectedOption == 2,
-                    onTap: () => setState(() => _selectedOption = 2),
                   ),
-                  const Divider(color: AppColors.divider, height: 1),
-                  _PaymentOption(
-                    icon: Icons.account_balance_rounded,
-                    label: 'Bank Transfer (JazzCash / EasyPaisa)',
-                    isSelected: _selectedOption == 3,
-                    onTap: () => setState(() => _selectedOption = 3),
-                  ),
-                ]),
-        
-                // ── Proceed button ────────────────────────────────────────────
-                const SizedBox(height: AppSpacing.xl),
-                CustomFilledButton(
-                  label: AppConstants.paymentProceedButton,
-                  onTap: () => context.go('/payment-success'),
-                ),
-                const SizedBox(height: AppSpacing.xl),
-              ],
-            ),
+                ],
+              ),
+              SizedBox(height: AppSpacing.xl.h),
+
+              // Other Methods
+              const SectionHeader(AppStrings.otherOptions),
+              SizedBox(height: AppSpacing.md.h),
+              
+              _PaymentOptionTile(
+                id: 'cash',
+                title: 'Cash on Arrival',
+                subtitle: 'Pay directly to provider',
+                icon: Icons.money_rounded,
+                isSelected: _selectedMethod == 'cash',
+                onTap: () => setState(() => _selectedMethod = 'cash'),
+              ),
+              
+              SizedBox(height: 100.h),
+            ],
+          ),
+        ),
+      ),
+      bottomSheet: Container(
+        padding: EdgeInsets.all(AppSpacing.md.w),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          boxShadow: AppShadows.sheet,
+        ),
+        child: SafeArea(
+          child: CustomFilledButton(
+            label: AppStrings.proceedToPay,
+            isLoading: _isLoading,
+            onTap: _handlePayment,
           ),
         ),
       ),
     );
   }
-
-  Widget _buildInfoCard({required List<Widget> children}) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        boxShadow: AppShadows.card,
-      ),
-      child: Column(children: children),
-    );
-  }
 }
 
-class _PaymentOption extends StatelessWidget {
+class _PaymentOptionTile extends StatelessWidget {
+  final String id;
+  final String title;
+  final String subtitle;
   final IconData icon;
-  final String label;
   final bool isSelected;
   final VoidCallback onTap;
 
-  const _PaymentOption({
+  const _PaymentOptionTile({
+    required this.id,
+    required this.title,
+    required this.subtitle,
     required this.icon,
-    required this.label,
     required this.isSelected,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.card),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+      child: AnimatedContainer(
+        duration: AppDurations.fast,
+        padding: EdgeInsets.all(AppSpacing.md.w),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.divider,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
         child: Row(
           children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon, color: AppColors.primary, size: 20),
-            ),
-            const SizedBox(width: AppSpacing.md),
+            Icon(icon, color: isSelected ? AppColors.primary : AppColors.textHint, size: 28.sp),
+            SizedBox(width: AppSpacing.md.w),
             Expanded(
-              child: Text(
-                label, 
-                style: AppTextStyles.bodyLarge,
-                overflow: TextOverflow.ellipsis,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: AppTextStyles.bodyLarge.copyWith(
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                      color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                    ),
+                  ),
+                  Text(subtitle, style: AppTextStyles.bodySmall),
+                ],
               ),
             ),
-            const SizedBox(width: 8),
-            // Custom radio circle
             Container(
-              width: 20,
-              height: 20,
+              width: 24.w,
+              height: 24.w,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? AppColors.primary : AppColors.textHint,
+                  color: isSelected ? AppColors.primary : AppColors.divider,
                   width: 2,
                 ),
               ),
               child: isSelected
                   ? Center(
                       child: Container(
-                        width: 10,
-                        height: 10,
+                        width: 12.w,
+                        height: 12.w,
                         decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
                           color: AppColors.primary,
+                          shape: BoxShape.circle,
                         ),
                       ),
                     )
@@ -215,29 +221,4 @@ class _PaymentOption extends StatelessWidget {
       ),
     );
   }
-}
-
-InputDecoration _inputDecoration(
-    {required String hint, required IconData icon}) {
-  return InputDecoration(
-    hintText: hint,
-    hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textHint),
-    prefixIcon: Icon(icon, color: AppColors.textHint, size: 20),
-    filled: true,
-    fillColor: AppColors.surface,
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(AppRadius.input),
-      borderSide: const BorderSide(color: AppColors.divider),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(AppRadius.input),
-      borderSide: const BorderSide(color: AppColors.divider),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(AppRadius.input),
-      borderSide: const BorderSide(color: AppColors.primary, width: 2),
-    ),
-    contentPadding:
-        const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-  );
 }

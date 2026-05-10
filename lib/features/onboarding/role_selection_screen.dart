@@ -1,14 +1,13 @@
+// Purpose: User chooses Hirer or Provider role at onboarding.
+// Doc: 04_ui_improvement_and_fix_phase.md — Step 3: Role Selection Screen
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/config/app_theme.dart';
-import '../../core/config/app_constants.dart';
 import '../../core/providers/role_provider.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// RoleSelectionScreen — User chooses Hirer or Provider role at onboarding
-// Two animated role cards; selection sets Riverpod state and navigates to login
-// ─────────────────────────────────────────────────────────────────────────────
 class RoleSelectionScreen extends ConsumerStatefulWidget {
   const RoleSelectionScreen({super.key});
 
@@ -19,8 +18,6 @@ class RoleSelectionScreen extends ConsumerStatefulWidget {
 
 class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen>
     with TickerProviderStateMixin {
-  static const bool enableAnimations = true;
-
   late final AnimationController _hirerController;
   late final AnimationController _providerController;
   late final Animation<double> _hirerFade;
@@ -33,11 +30,11 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen>
     super.initState();
     _hirerController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: AppDurations.slow,
     );
     _providerController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: AppDurations.slow,
     );
 
     _hirerFade = CurvedAnimation(
@@ -58,15 +55,10 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen>
     ).animate(
         CurvedAnimation(parent: _providerController, curve: Curves.easeOut));
 
-    if (enableAnimations) {
-      Future.delayed(const Duration(milliseconds: 100),
-          () => _hirerController.forward());
-      Future.delayed(const Duration(milliseconds: 200),
-          () => _providerController.forward());
-    } else {
-      _hirerController.value = 1.0;
-      _providerController.value = 1.0;
-    }
+    Future.delayed(const Duration(milliseconds: 100),
+        () => _hirerController.forward());
+    Future.delayed(const Duration(milliseconds: 200),
+        () => _providerController.forward());
   }
 
   @override
@@ -87,82 +79,78 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen>
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: LayoutBuilder(
-          builder: (context, constraints) {
+          builder: (BuildContext context, BoxConstraints constraints) {
             return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg.w),
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
                 child: IntrinsicHeight(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      const SizedBox(height: AppSpacing.xl),
+                      SizedBox(height: AppSpacing.xl.h),
 
-                      // ── Header ────────────────────────────────────────────────
-                      const Icon(
+                      // ── Header ─────────────────────────────────────────
+                      Icon(
                         Icons.home_rounded,
-                        size: 44,
+                        size: 44.sp,
                         color: AppColors.primary,
                       ),
-                      const SizedBox(height: AppSpacing.md),
+                      SizedBox(height: AppSpacing.md.h),
                       Text(
-                        'Who are you?',
+                        AppStrings.roleTitle,
                         style: AppTextStyles.headingLarge,
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: AppSpacing.sm),
+                      SizedBox(height: AppSpacing.sm.h),
                       Text(
-                        'Choose your role to get started',
+                        AppStrings.roleSubtitle,
                         style: AppTextStyles.bodyMedium,
                         textAlign: TextAlign.center,
                       ),
 
-                      const SizedBox(height: AppSpacing.xxl),
+                      SizedBox(height: AppSpacing.xxl.h),
 
-                      // ── Hirer card ─────────────────────────────────────────────
+                      // ── Hirer card ─────────────────────────────────────
                       FadeTransition(
                         opacity: _hirerFade,
                         child: SlideTransition(
                           position: _hirerSlide,
                           child: _RoleCard(
-                            role: UserRole.hirer,
                             icon: Icons.home_rounded,
-                            title: AppConstants.hirerRoleName,
-                            description: AppConstants.hirerRoleDescription,
+                            title: AppStrings.hirerRoleName,
+                            description: AppStrings.hirerRoleDescription,
                             onTap: () => _selectRole(UserRole.hirer),
                           ),
                         ),
                       ),
 
-                      const SizedBox(height: AppSpacing.md),
+                      SizedBox(height: AppSpacing.md.h),
 
-                      // ── Provider card ──────────────────────────────────────────
+                      // ── Provider card ──────────────────────────────────
                       FadeTransition(
                         opacity: _providerFade,
                         child: SlideTransition(
                           position: _providerSlide,
                           child: _RoleCard(
-                            role: UserRole.provider,
                             icon: Icons.work_rounded,
-                            title: AppConstants.providerRoleName,
-                            description: AppConstants.providerRoleDescription,
+                            title: AppStrings.providerRoleName,
+                            description: AppStrings.providerRoleDescription,
                             onTap: () => _selectRole(UserRole.provider),
                           ),
                         ),
                       ),
 
                       const Spacer(),
-                      const SizedBox(height: AppSpacing.lg),
+                      SizedBox(height: AppSpacing.lg.h),
 
-                      // ── Footer ────────────────────────────────────────────────
+                      // ── Footer ─────────────────────────────────────────
                       Text(
-                        AppConstants.taglineShort,
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.textHint,
-                        ),
+                        AppStrings.taglineShort,
+                        style: AppTextStyles.caption,
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: AppSpacing.lg),
+                      SizedBox(height: AppSpacing.lg.h),
                     ],
                   ),
                 ),
@@ -176,14 +164,12 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen>
 }
 
 class _RoleCard extends StatefulWidget {
-  final UserRole role;
   final IconData icon;
   final String title;
   final String description;
   final VoidCallback onTap;
 
   const _RoleCard({
-    required this.role,
     required this.icon,
     required this.title,
     required this.description,
@@ -196,15 +182,15 @@ class _RoleCard extends StatefulWidget {
 
 class _RoleCardState extends State<_RoleCard>
     with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scale;
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 120),
+      duration: AppDurations.instant,
     );
     _scale = Tween<double>(begin: 1.0, end: 0.96).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
@@ -230,7 +216,7 @@ class _RoleCardState extends State<_RoleCard>
         scale: _scale,
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          padding: EdgeInsets.all(AppSpacing.lg.w),
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(AppRadius.card),
@@ -240,25 +226,25 @@ class _RoleCardState extends State<_RoleCard>
           child: Row(
             children: [
               Container(
-                width: 56,
-                height: 56,
+                width: 56.w,
+                height: 56.w,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
+                  color: AppColors.primarySurface,
                   borderRadius: BorderRadius.circular(AppRadius.chip),
                 ),
                 child: Icon(
                   widget.icon,
-                  size: 30,
+                  size: 30.sp,
                   color: AppColors.primary,
                 ),
               ),
-              const SizedBox(width: AppSpacing.md),
+              SizedBox(width: AppSpacing.md.w),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(widget.title, style: AppTextStyles.headingSmall),
-                    const SizedBox(height: AppSpacing.xs),
+                    SizedBox(height: AppSpacing.xs.h),
                     Text(
                       widget.description,
                       style: AppTextStyles.bodyMedium,
@@ -268,10 +254,10 @@ class _RoleCardState extends State<_RoleCard>
                   ],
                 ),
               ),
-              const SizedBox(width: AppSpacing.sm),
-              const Icon(
+              SizedBox(width: AppSpacing.sm.w),
+              Icon(
                 Icons.arrow_forward_ios_rounded,
-                size: 16,
+                size: 16.sp,
                 color: AppColors.primary,
               ),
             ],

@@ -1,13 +1,15 @@
+// Purpose: Horizontal scroll card shown on Home screen for service providers.
+// Doc: 04_ui_improvement_and_fix_phase.md — Step 4: Home Screen
+
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/config/app_theme.dart';
 import '../../core/models/provider_model.dart';
 import 'rating_row.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ServiceCard — Horizontal scroll card shown on Home screen
-// ─────────────────────────────────────────────────────────────────────────────
+/// ServiceCard — Full-bleed image card with gradient overlay.
 class ServiceCard extends StatelessWidget {
   final ServiceProvider provider;
 
@@ -23,12 +25,13 @@ class ServiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = _avatarUrls[provider.id] ?? 'https://i.pravatar.cc/300';
+    final String imageUrl =
+        _avatarUrls[provider.id] ?? 'https://i.pravatar.cc/300';
     return GestureDetector(
       onTap: () => context.push('/provider/${provider.id}'),
       child: Container(
-        width: 160,
-        height: 200,
+        width: 160.w,
+        height: 210.h,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppRadius.card),
           boxShadow: AppShadows.card,
@@ -81,35 +84,35 @@ class ServiceCard extends StatelessWidget {
 
               // ── Bottom text content ───────────────────────────────────
               Positioned(
-                left: 10,
-                right: 10,
-                bottom: 12,
+                left: 10.w,
+                right: 10.w,
+                bottom: 12.h,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       provider.serviceType.toUpperCase(),
-                      style: AppTextStyles.bodySmall.copyWith(
+                      style: AppTextStyles.label.copyWith(
                         color: Colors.white70,
-                        fontSize: 10,
+                        fontSize: 10.sp,
                         letterSpacing: 0.6,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 2),
+                    SizedBox(height: 2.h),
                     RatingRow(
                       rating: provider.rating,
                       reviewCount: provider.reviewCount,
                       textColor: Colors.white,
                     ),
-                    const SizedBox(height: 3),
+                    SizedBox(height: 3.h),
                     Text(
                       provider.formattedPrice,
                       style: AppTextStyles.price.copyWith(
                         color: Colors.white,
-                        fontSize: 13,
+                        fontSize: 13.sp,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

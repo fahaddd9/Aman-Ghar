@@ -1,161 +1,223 @@
+// Purpose: Profile screen (User account management) Role-aware.
+// Doc: 05_complete_ui_and_provider_side.md
+
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/config/app_theme.dart';
-import '../../core/config/app_constants.dart';
+import '../../core/providers/auth_provider.dart';
 import '../../core/providers/role_provider.dart';
-import '../../shared/widgets/custom_outlined_button.dart';
 import '../../shared/widgets/bottom_nav_bar.dart';
+import '../../shared/widgets/custom_outlined_button.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ProfileScreen — Avatar, user info, menu list items, LOG OUT button
-// ─────────────────────────────────────────────────────────────────────────────
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
-  static const String _userAvatarUrl = 'https://i.pravatar.cc/200?img=5';
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final role = ref.watch(roleProvider);
+    final isProvider = role == UserRole.provider;
+    final userProfileAsync = ref.watch(userProfileProvider);
+    final profile = userProfileAsync.valueOrNull;
+    
+    final name = profile?['name'] as String? ?? (isProvider ? 'Anita Sharma' : AppStrings.dummyUserName);
+    final email = profile?['email'] as String? ?? (isProvider ? 'anita@example.com' : AppStrings.dummyUserEmail);
+    final initials = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        scrolledUnderElevation: 0,
+        title: const Text(AppStrings.profileTitle),
         centerTitle: true,
-        title: Text(AppConstants.profileTitle, style: AppTextStyles.headingSmall),
-        leading: context.canPop() ? IconButton(
-          onPressed: () => context.pop(),
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
-        ) : null,
       ),
-      bottomNavigationBar: const AmanGharBottomNav(currentIndex: 2),
+      bottomNavigationBar: const AmanGharBottomNav(currentIndex: 3),
       body: SafeArea(
         child: SingleChildScrollView(
+          padding: EdgeInsets.all(AppSpacing.md.w),
           child: Column(
             children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(AppSpacing.xl),
-                color: AppColors.primary.withValues(alpha: 0.05),
+              // ── Header (Avatar + Info) ────────────────────────────────
+              Center(
                 child: Column(
                   children: [
-                    Stack(
-                      children: [
-                        CircleAvatar(
-                          radius: 48,
-                          backgroundColor: AppColors.primaryLight.withValues(alpha: 0.4),
-                          child: ClipOval(
-                            child: CachedNetworkImage(
-                              imageUrl: _userAvatarUrl,
-                              width: 96,
-                              height: 96,
-                              fit: BoxFit.cover,
-                              errorWidget: (_, __, ___) => const Icon(
-                                  Icons.person_rounded,
-                                  color: AppColors.primary,
-                                  size: 48),
-                            ),
+                    Hero(
+                      tag: 'profile-avatar',
+                      child: Container(
+                        width: 100.w,
+                        height: 100.w,
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryLight,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.surface, width: 4),
+                          boxShadow: AppShadows.card,
+                        ),
+                        child: Center(
+                          child: Text(
+                            initials,
+                            style: AppTextStyles.displayLarge.copyWith(color: AppColors.primaryDark),
                           ),
                         ),
-                        const Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: _EditAvatarButton(),
-                        ),
-                      ],
+                      ),
                     ),
-                    const SizedBox(height: AppSpacing.md),
+                    SizedBox(height: AppSpacing.md.h),
                     Text(
-                      AppConstants.dummyUserName, 
-                      style: AppTextStyles.headingMedium,
-                      textAlign: TextAlign.center,
-                      overflow: TextOverflow.ellipsis,
+                      name,
+                      style: AppTextStyles.headingLarge,
                     ),
-                    const SizedBox(height: AppSpacing.xs),
+                    SizedBox(height: 2.h),
                     Text(
-                      AppConstants.dummyUserEmail, 
+                      email,
                       style: AppTextStyles.bodyMedium,
-                      textAlign: TextAlign.center,
-                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: AppSpacing.lg.h),
+                    CustomOutlinedButton(
+                      label: AppStrings.editProfile,
+                      height: 40.h,
+                      isFullWidth: false,
+                      onTap: () => context.push('/edit-profile'),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: AppSpacing.sm),
-              _ProfileMenuItem(
-                icon: Icons.calendar_month_rounded, 
-                label: AppConstants.profileMyBookings, 
-                onTap: () => context.push('/my-bookings'),
-              ),
-              const Divider(color: AppColors.divider, indent: 56, height: 1),
-              _ProfileMenuItem(icon: Icons.person_outline_rounded, label: AppConstants.profileEditProfile, onTap: () {}),
-              const Divider(color: AppColors.divider, indent: 56, height: 1),
-              _ProfileMenuItem(icon: Icons.payment_rounded, label: AppConstants.profilePaymentHistory, onTap: () {}),
-              const Divider(color: AppColors.divider, indent: 56, height: 1),
-              _ProfileMenuItem(icon: Icons.headset_mic_rounded, label: AppConstants.profileSupport, onTap: () {}),
-              const Divider(color: AppColors.divider, indent: 56, height: 1),
-              _ProfileMenuItem(icon: Icons.info_outline_rounded, label: AppConstants.profileAbout, onTap: () {}),
-              const SizedBox(height: AppSpacing.xl),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                child: CustomOutlinedButton(
-                  label: AppConstants.profileLogout,
-                  borderColor: AppColors.error,
-                  textColor: AppColors.error,
-                  onTap: () {
-                    ref.read(roleProvider.notifier).state = null;
-                    context.go('/role-select');
-                  },
+
+              SizedBox(height: AppSpacing.xxl.h),
+
+              // ── Menu List ─────────────────────────────────────────────
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.card),
+                  boxShadow: AppShadows.card,
+                ),
+                child: Column(
+                  children: [
+                    if (isProvider) ...[
+                      _MenuTile(
+                        icon: Icons.account_balance_wallet_rounded,
+                        title: 'My Earnings',
+                        onTap: () => context.push('/earnings'), // TODO: Add route
+                      ),
+                      const Divider(height: 1),
+                    ],
+                    _MenuTile(
+                      icon: isProvider ? Icons.receipt_long_rounded : Icons.history_rounded,
+                      title: isProvider ? 'My Requests' : AppStrings.myBookings,
+                      onTap: () => context.go('/my-bookings'),
+                    ),
+                    const Divider(height: 1),
+                    if (!isProvider) ...[
+                      _MenuTile(
+                        icon: Icons.payment_rounded,
+                        title: AppStrings.paymentHistory,
+                        onTap: () => context.push('/payment-history'),
+                      ),
+                      const Divider(height: 1),
+                    ],
+                    _MenuTile(
+                      icon: Icons.help_outline_rounded,
+                      title: AppStrings.support,
+                      onTap: () => context.push('/support'),
+                    ),
+                    const Divider(height: 1),
+                    _MenuTile(
+                      icon: Icons.info_outline_rounded,
+                      title: AppStrings.aboutApp,
+                      onTap: () => context.push('/about'),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: AppSpacing.xl),
+
+              SizedBox(height: AppSpacing.xl.h),
+
+              // ── Logout Button ─────────────────────────────────────────
+              ListTile(
+                contentPadding: EdgeInsets.symmetric(horizontal: AppSpacing.md.w),
+                leading: Container(
+                  padding: EdgeInsets.all(8.w),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppRadius.button),
+                  ),
+                  child: Icon(Icons.logout_rounded, color: AppColors.error, size: 24.sp),
+                ),
+                title: Text(
+                  AppStrings.logout,
+                  style: AppTextStyles.headingSmall.copyWith(color: AppColors.error),
+                ),
+                onTap: () => _showLogoutDialog(context, ref),
+              ),
+              
+              SizedBox(height: AppSpacing.xxl.h),
             ],
           ),
         ),
       ),
     );
   }
-}
 
-class _EditAvatarButton extends StatelessWidget {
-  const _EditAvatarButton();
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 32, height: 32,
-      decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
-      child: const Icon(Icons.edit_rounded, size: 14, color: Colors.white),
+  void _showLogoutDialog(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.card)),
+        title: Text(AppStrings.logoutConfirmTitle, style: AppTextStyles.headingMedium),
+        content: Text(AppStrings.logoutConfirmMessage, style: AppTextStyles.bodyMedium),
+        actions: [
+          TextButton(
+            onPressed: () => context.pop(),
+            child: Text(AppStrings.cancel, style: AppTextStyles.bodyMedium),
+          ),
+          TextButton(
+            onPressed: () async {
+              context.pop();
+              await ref.read(authControllerProvider.notifier).signOut();
+              // Router redirect will handle navigating to auth pages,
+              // but we can explicitly reset the role state:
+              ref.read(roleProvider.notifier).state = UserRole.hirer;
+            },
+            child: Text(
+              AppStrings.logout,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.error,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _ProfileMenuItem extends StatelessWidget {
+class _MenuTile extends StatelessWidget {
   final IconData icon;
-  final String label;
+  final String title;
   final VoidCallback onTap;
-  const _ProfileMenuItem({required this.icon, required this.label, required this.onTap});
+
+  const _MenuTile({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      onTap: onTap,
+      contentPadding: EdgeInsets.symmetric(horizontal: AppSpacing.md.w, vertical: AppSpacing.xs.h),
       leading: Container(
-        width: 40, height: 40,
+        padding: EdgeInsets.all(8.w),
         decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(10),
+          color: AppColors.primarySurface,
+          borderRadius: BorderRadius.circular(AppRadius.button),
         ),
-        child: Icon(icon, color: AppColors.primary, size: 20),
+        child: Icon(icon, color: AppColors.primary, size: 24.sp),
       ),
-      title: Text(
-        label, 
-        style: AppTextStyles.bodyLarge,
-        overflow: TextOverflow.ellipsis,
-      ),
-      trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textHint),
+      title: Text(title, style: AppTextStyles.headingSmall),
+      trailing: Icon(Icons.arrow_forward_ios_rounded, color: AppColors.textHint, size: 16.sp),
+      onTap: onTap,
     );
   }
 }

@@ -1,0 +1,57 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Function to check if user is logged in
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Function to check if the user is accessing their own document
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // ── USERS COLLECTION ──────────────────────────────────────────
+    match /users/{userId} {
+      // Users can read and write only their own profile data
+      allow read, update: if isAuthenticated() && isOwner(userId);
+      // Allow creation during signup
+      allow create: if isAuthenticated() && isOwner(userId);
+      // No one can delete a user document (must be done via Cloud Functions or Admin)
+      allow delete: if false;
+    }
+
+    // ── BOOKINGS COLLECTION ──────────────────────────────────────────
+    match /bookings/{bookingId} {
+      // Hirers can read their own bookings
+      // Providers can read bookings where they are the provider
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.hirerId || 
+        request.auth.uid == resource.data.providerId
+      );
+      
+      // Creating a booking requires the user to be the hirer
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.hirerId;
+      
+      // Both hirer and provider can update the booking (e.g. status changes)
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.hirerId || 
+        request.auth.uid == resource.data.providerId
+      );
+      
+      allow delete: if false;
+    }
+
+    // ── CHATS COLLECTION ──────────────────────────────────────────
+    match /chats/{chatId} {
+      // Users can read/write chats if their UID is in the participants array
+      allow read, write: if isAuthenticated() && (request.auth.uid in resource.data.participants);
+    }
+
+    // Default deny for everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
